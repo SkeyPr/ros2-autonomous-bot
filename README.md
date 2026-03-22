@@ -84,7 +84,7 @@ source install/setup.bash
 
 **Launch simulation:**
 ```bash
-ros2 launch my_bot launch_sim.launch.py
+ros2 launch my_bot sim_launcher.launch.py
 ```
 
 **Map the environment:**
