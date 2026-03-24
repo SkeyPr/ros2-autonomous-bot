@@ -21,6 +21,10 @@ The robot actually doing it:
 
 ![Robot following the planned path](assets/navigation2.jpeg)
 
+Detecting a traffic cone and localizing it in 3D space:
+
+![YOLO cone detection with depth](assets/cone_detection.jpeg)
+
 ---
 
 ## Capabilities
@@ -30,6 +34,8 @@ The robot actually doing it:
 - **Autonomous Navigation** — plans and executes paths to goal poses using the Nav2 stack
 - **Real-time Obstacle Avoidance** — detects and navigates around dynamic obstacles not present in the original map. Tested by throwing barrels at it. It was not impressed.
 - **Manual Control** — PS3 DualShock controller support via teleop_twist_joy
+- **Object Detection** — custom YOLOv8n model trained on 4000+ images, detecting traffic cones in real time (mAP50: 0.984)
+- **3D Object Localization** — combines YOLO bounding boxes with depth camera data to compute real-world XYZ position of detected objects
 - **Depth Camera** — onboard RGB-D sensor streaming to ROS2 image topics
 
 ---
@@ -47,6 +53,9 @@ The robot actually doing it:
 | Regulated Pure Pursuit | Local path controller |
 | NavFn | Global path planner |
 | diff_drive plugin | Wheel control and odometry |
+| YOLOv8n | Custom trained object detection model |
+| OpenCV + cv_bridge | Image processing and ROS2 integration |
+| Ultralytics | YOLOv8 training and inference framework |
 
 ---
 
@@ -63,7 +72,37 @@ LiDAR ──► /scan ──► slam_toolbox ──► /map
                          │
                          ▼
 Goal Pose ──► bt_navigator ──► planner ──► controller ──► /cmd_vel
+
+Camera ──► /camera/image_raw ──► YoloNode ──► /yolo/image_detected
+       │
+       ├──► /camera/depth/image_raw ──► ConeLocalizer ──► /cone_position
+       │
+       └──► /camera/camera_info ──────────────┘
 ```
+
+## Object Detection — Custom YOLOv8 Model
+
+Trained a custom YOLOv8n model to detect traffic cones using a Roboflow dataset of 4030 images.
+
+**Training setup:**
+- Platform: Google Colab (T4 GPU)
+- Dataset: 3224 train / 806 val images at 640x640
+- Epochs: 50, Batch size: 16
+
+**Results:**
+
+| Metric | Value |
+|---|---|
+| mAP50 | 0.984 |
+| mAP50-95 | 0.912 |
+| Precision | 0.963 |
+| Recall | 0.950 |
+| Model size | 6.2MB |
+| Inference time | 2.5ms |
+
+The `cone_localizer` node fuses detection results with depth camera data to back-project each detected cone into 3D camera space, publishing its XYZ coordinates as a `geometry_msgs/PointStamped` on `/cone_position`.
+
+---
 
 ---
 
@@ -73,6 +112,14 @@ Goal Pose ──► bt_navigator ──► planner ──► controller ──�
 - ROS2 Humble
 - Gazebo
 - nav2_bringup, slam_toolbox, teleop_twist_joy
+- ultralytics, cv_bridge, OpenCV
+
+**Install Python dependencies:**
+```bash
+pip3 install ultralytics "numpy==1.26.4" --user
+```
+
+> ⚠️ NumPy must be pinned to 1.x — ROS2 Humble's cv_bridge is incompatible with NumPy 2.x
 
 **Clone and build:**
 ```bash
@@ -84,7 +131,7 @@ source install/setup.bash
 
 **Launch simulation:**
 ```bash
-ros2 launch my_bot sim_launcher.launch.py
+ros2 launch my_bot launch_sim.launch.py
 ```
 
 **Map the environment:**
@@ -103,10 +150,23 @@ ros2 launch my_bot navigation.launch.py
 ```
 In RViz, set a **2D Pose Estimate** to initialize localization, then set a **2D Goal Pose** and watch the robot handle the rest.
 
+**Run YOLO detection:**
+```bash
+ros2 run my_bot yolo_node.py
+```
+
+**Run 3D cone localization:**
+```bash
+ros2 run my_bot cone_localizer.py
+```
+Echo detected cone positions:
+```bash
+ros2 topic echo /cone_position
+```
+
 ---
 
 ## Package Structure
-
 ```
 src/my_bot/
 ├── config/
@@ -125,17 +185,23 @@ src/my_bot/
 │   ├── rsp.launch.py
 │   ├── slam.launch.py
 │   └── navigation.launch.py
-└── maps/
-    ├── map.pgm
-    └── map.yaml
+├── maps/
+│   ├── map.pgm
+│   └── map.yaml
+├── models/
+│   └── best.pt
+└── scripts/
+    ├── yolo_node.py
+    └── cone_localizer.py
 ```
 
 ---
 
 ## What's Next
 
-- Integrating object detection via the depth camera
+- Making the robot stop or reroute when a cone is detected in its path
 - Multi-waypoint navigation
+- Expanding the detection model to include additional object classes
 - Exploring Nav2 behaviour trees for more complex navigation logic
 
 ---
