@@ -1,0 +1,16 @@
+teleop_twist_joy_node:
+  ros__parameters:
+    enable_button: 4
+    enable_turbo_button: 5    # ← whatever index R1 shows up at
+    axis_linear:
+      x: 1
+    axis_angular:
+      yaw: 0
+    scale_linear:
+      x: 0.5                  # normal speed
+    scale_linear_turbo:
+      x: 1.5                  # turbo speed
+    scale_angular:
+      yaw: 1.0                # normal turn speed
+    scale_angular_turbo:
+      yaw: 2.0                # turbo turn speed
