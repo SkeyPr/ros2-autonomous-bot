@@ -31,6 +31,7 @@ install(
 install(PROGRAMS
   scripts/yolo_node.py
   scripts/cone_localizer.py
+  scripts/cone_detector_classic.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
