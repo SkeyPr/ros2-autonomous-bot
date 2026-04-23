@@ -1,70 +1,43 @@
-# Full Academic Report Draft
+# Mini Project Report
 
-## Title
-Vision-Guided Autonomous Detection and Localization of Construction Cones and Barrels for Safe Mobile Robot Navigation in Dynamic Construction Sites
+## 1. Title of Project
+Vision-Guided Detection and 3D Localization of Construction Cones and Barrels Using Classical and Deep Learning Computer Vision
 
-## Abstract
-Construction sites are dynamic, safety-critical environments in which temporary markers such as cones and barrels define operational boundaries. Because marker placement changes frequently, static-map-only autonomy cannot guarantee safe decision-making. This report presents a ROS2-based autonomous robotic framework for real-time marker perception and depth-assisted 3D localization, designed to support safer navigation behavior in changing work zones. The implementation combines Gazebo simulation, SLAM Toolbox, AMCL localization, Nav2 planning/control, and two complementary perception pipelines: a classical HSV-based cone detector and a YOLOv8 learned detector/localizer. Current results demonstrate working dual-path cone perception and metric 3D localization; the next development stage focuses on robust cone-and-barrel learned detection and behavior-level hazard response (slowdown, stop, reroute). A KPI-driven evaluation methodology is defined across detection quality, latency, localization accuracy, and navigation safety outcomes. The contribution is an end-to-end, reproducible perception-to-action architecture tailored to construction safety workflows.
+## 2. Introduction
+Construction sites are dynamic and safety-critical environments where temporary markers such as cones and barrels define working boundaries. Because these markers are frequently moved, static map-based autonomy alone is not sufficient. This mini project focuses on computer vision methods for real-time marker detection and depth-assisted 3D localization.
 
-## 1. Introduction
-### 1.1 Background
-Mobile robots are increasingly used in industrial and construction workflows for inspection, logistics, and surveillance. Construction sites, however, are less structured than factory floors and involve temporary, frequently changing safety markers such as cones and barrels.
+The system is developed in ROS2 Humble with Gazebo simulation and uses an RGB-D camera stream. Two CV approaches are implemented and compared:
+1. Classical HSV-based cone detection with contour and structural validation.
+2. YOLOv8-based learned detection/localization pipeline.
 
-### 1.2 Problem Statement
-Construction cone and barrel detection on construction sites.
+This comparison allows both interpretability (classical vision) and scalability (deep learning), while keeping the same sensing setup.
 
-### 1.3 Motivation
-When robots rely only on pre-built maps, temporary safety markers may be ignored, creating unsafe motion plans near active work zones. Robust autonomous operation therefore requires scene-level semantic perception and responsive navigation policies that adapt to real-time marker observations.
+## 3. Problem Definition and Algorithm
+### Problem Definition
+Detect construction cones and barrels in real time from camera input and estimate their 3D positions so that the robot can use this information for safety-aware operation.
 
-### 1.4 Objectives
-1. Detect construction cones and barrels in real time.
-2. Estimate the 3D position of detected objects.
-3. Integrate detections with autonomous navigation policies.
-4. Trigger safe behavior based on hazard proximity.
-5. Benchmark performance with reproducible KPIs.
+### Algorithm
+#### A. Classical HSV-Based Algorithm (Cone-Focused)
+1. Capture RGB and depth frames.
+2. Convert RGB image to HSV.
+3. Apply orange color threshold to create mask.
+4. Apply morphology (open, dilate, close) to reduce noise and merge regions.
+5. Extract contours and apply geometric filters (area, solidity, aspect ratio).
+6. Apply structural checks (dark-base presence, upper/lower color distribution).
+7. Compute bounding box center and read depth value.
+8. Back-project 2D point to 3D using camera intrinsics.
 
-## 2. Related Work and Technical Context
-Autonomous navigation in ROS2 commonly combines SLAM/localization, global planning, and local control. For visual detection, two common families are classical color/shape pipelines and deep-learning detectors. Classical HSV pipelines are fast and interpretable but sensitive to lighting and domain changes. Deep-learning detectors such as YOLO are widely adopted for real-time vision tasks due to favorable speed-accuracy tradeoffs and stronger generalization. In construction-like domains, the key challenge is bridging object perception with actionable robot behavior under dynamic scene changes.
+#### B. YOLOv8-Based Algorithm
+1. Capture RGB and depth frames.
+2. Run YOLO inference on RGB image.
+3. Obtain class label, confidence, and bounding box.
+4. Compute bounding box center pixel.
+5. Read depth value at center.
+6. Back-project to 3D point using camera intrinsics.
+7. Publish annotated image and 3D position output.
 
-This project adopts both families deliberately. The classical branch provides a transparent baseline for cone detection and failure analysis, while the learned branch provides a scalable path toward robust multi-class perception, including barrel detection.
-
-## 3. System Architecture
-### 3.1 Hardware and Simulation Model
-The robot is modeled as a differential-drive base with:
-1. LiDAR for scan-based mapping and obstacle awareness.
-2. RGB-D camera for object detection and depth-assisted localization.
-3. Gazebo physics simulation in construction-themed worlds containing cones and barrels.
-
-### 3.2 Software Stack
-1. ROS2 Humble: middleware and node communication.
-2. Gazebo: simulation and sensor generation.
-3. SLAM Toolbox: online asynchronous mapping.
-4. AMCL: probabilistic localization on a saved map.
-5. Nav2: path planning, control, and behavior orchestration.
-6. OpenCV-based classical HSV pipeline for cone detection.
-7. YOLOv8: learned object detection inference.
-8. OpenCV and cv_bridge: ROS-image interoperability.
-
-### 3.3 Data Flow
-1. Camera publishes RGB and depth streams.
-2. Classical branch performs HSV thresholding, morphology, and contour validation.
-3. Learned branch performs YOLO inference.
-4. Localization node maps accepted detections to 3D coordinates.
-5. Navigation consumes hazard points and adjusts motion behavior.
-
-In the current implementation, detection outputs are published for visualization and localization; behavior-level hazard coupling is treated as the next integration milestone.
-
-## 4. Methodology
-### 4.1 Perception Methods
-
-#### 4.1.1 Classical HSV-Based Cone Detection
-The classical detector converts RGB frames to HSV color space and applies orange-range thresholding. Morphological opening, vertical dilation, and closing are used to suppress noise and merge fragmented cone regions. Candidate contours are validated using area, solidity, aspect ratio, and structural color heuristics (including dark-base and upper/lower orange-distribution checks). This branch is computationally lightweight, interpretable, and suitable as a cone-focused baseline.
-
-#### 4.1.2 YOLO-Based Learned Detection
-A YOLO-based detector processes RGB frames and outputs class labels, confidence scores, and bounding boxes. In the current codebase, YOLO is used both for image annotation and depth-assisted localization. This branch is the primary path for scalable multi-class detection, including cone and barrel classes after two-class model retraining. For each accepted detection, the center pixel is sampled in the depth frame.
-
-### 4.2 3D Localization Method
-Using camera intrinsic parameters \((f_x, f_y, c_x, c_y)\), a pixel \((u,v)\) with depth \(Z\) is back-projected:
+### 3D Projection Equation
+Given pixel $(u,v)$, depth $Z$, and intrinsics $(f_x, f_y, c_x, c_y)$:
 
 $$
 X = \frac{(u-c_x)Z}{f_x}, \quad
@@ -72,114 +45,133 @@ Y = \frac{(v-c_y)Z}{f_y}, \quad
 Z = Z
 $$
 
-The resulting point is published as a 3D ROS message for downstream planning.
+## 4. Block Diagram
+```text
+RGB Image + Depth Image + Camera Info
+					 |
+					 v
+		+------------------------+
+		|   Perception Module    |
+		|------------------------|
+		| A) HSV Classical Path  |
+		| B) YOLOv8 Learned Path |
+		+------------------------+
+					 |
+					 v
+		Detection (bbox/class/conf)
+					 |
+					 v
+		 Depth-based 3D Localization
+					 |
+					 v
+		Output Topics / Visualization
+		(/cone_classic/image,
+		 /yolo/image_detected,
+		 /cone_classic/position,
+		 /cone_position)
+```
 
-### 4.3 Navigation Integration
-Detected objects are converted into semantic zones:
-1. Caution zone: reduce linear velocity.
-2. Danger zone: stop and request local/global replanning.
-3. Critical zone: immediate halt and alert trigger.
+## 5. Methodology Used
+### Development Environment
+1. ROS2 Humble.
+2. Gazebo simulation.
+3. OpenCV, cv_bridge, NumPy.
+4. Ultralytics YOLOv8.
 
-At present, this policy is proposed architecture rather than fully implemented closed-loop behavior logic.
+### Experimental Method
+1. Run both CV approaches on the same RGB-D input stream.
+2. Compare detection quality and runtime behavior.
+3. Evaluate localization outputs from depth projection.
+4. Perform qualitative failure analysis (lighting, clutter, occlusion).
 
-### 4.4 Training Strategy
-1. Build class-balanced cone+barrel dataset.
-2. Apply augmentations for lighting and viewpoint variability.
-3. Validate class-wise performance using held-out scene splits.
-4. Tune confidence and NMS thresholds for safety-critical recall.
+### Evaluation Parameters
+1. Detection: precision, recall, mAP50, mAP50-95.
+2. Runtime: latency and FPS.
+3. Localization: 3D coordinate consistency/error.
 
-The present trained model emphasizes cone detection performance; barrel robustness is an explicit next-stage objective.
+## 6. Code of Project
+### Key Files
+1. `src/my_bot/scripts/cone_detector_classic.py` - Classical HSV detection + 3D localization.
+2. `src/my_bot/scripts/yolo_node.py` - YOLO inference and visualization.
+3. `src/my_bot/scripts/cone_localizer.py` - YOLO detection + depth-based 3D point publishing.
 
-## 5. Experimental Setup
-### 5.1 Environment
-Experiments are conducted in Gazebo worlds with varied cone/barrel placement, including cluttered and partially occluded conditions.
+### Sample Code Snippet (HSV Masking)
+```python
+hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+mask = cv2.inRange(hsv, self.lower_orange, self.upper_orange)
+kernel_small = np.ones((3, 3), np.uint8)
+mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_small)
+```
 
-### 5.2 Test Scenarios
-1. Static marker detection under nominal lighting.
-2. Mixed marker scenes with clutter and occlusions.
-3. Marker-adjacent goal navigation.
-4. Dynamic obstacle interactions with marker-presence constraints.
+### Sample Code Snippet (YOLO Inference)
+```python
+results = self.model(frame, verbose=False)
+annotated_frame = results[0].plot()
+```
 
-### 5.3 Metrics
-1. Detection: precision, recall, mAP50, mAP50-95 (per class, per approach).
-2. Runtime: average and percentile latency, FPS.
-3. Localization: mean absolute 3D error.
-4. Navigation: successful hazard-avoidance and reroute rate.
-5. Reliability: false positives per minute, node uptime.
+### Sample Code Snippet (3D Back-Projection)
+```python
+X = (u - self.cx) * Z / self.fx
+Y = (v - self.cy) * Z / self.fy
+```
 
-## 6. Results (Draft Structure)
-### 6.1 Perception Performance
-Report comparative table by approach:
-1. Classical HSV branch: cone precision/recall, false positives, latency.
-2. YOLO branch: cone precision/recall/mAP and barrel precision/recall/mAP.
+## 7. Snapshots of Input and Output
+### Input Snapshot
+1. Raw camera scene from Gazebo world with cones/barrels.
 
-Recommended analysis notes:
-1. Compare failure cases by lighting condition and distance.
-2. Include qualitative examples where one branch succeeds and the other fails.
-3. Report confidence-threshold sensitivity for safety-focused operating points.
+### Output Snapshots
+1. Navigation goal and robot execution:
+	- `assets/navigation1.jpeg`
+	- `assets/navigation2.jpeg`
+2. C    one detection and localization visualization:
+	- `assets/cone_detection.jpeg`
 
-### 6.2 Runtime Performance
-Report:
-1. Classical branch latency.
-2. YOLO inference latency.
-3. End-to-end pipeline latency.
-4. Throughput in FPS.
+Note: Add these images in the final report PDF under this section with captions.
 
-### 6.3 Localization Quality
-Report:
-1. Mean and median localization error.
-2. Error versus distance from sensor.
+## 8. Result and Experimental Evaluation
+### Observed Results
+1. Classical HSV pipeline successfully detects cone-like orange objects under suitable lighting.
+2. YOLO pipeline provides stronger generalization and is better suited for cone-and-barrel multi-class scaling.
+3. Depth-assisted localization provides metric 3D point outputs for detected objects.
 
-### 6.4 Navigation Safety Impact
-Compare baseline navigation vs hazard-aware navigation:
-1. Near-collision events.
-2. Emergency stop frequency.
-3. Goal completion success.
+### Comparative Evaluation (Qualitative)
+1. Classical approach:
+	- Advantages: simple, interpretable, lightweight.
+	- Limitations: sensitive to lighting and color distractors.
+2. YOLO approach:
+	- Advantages: robust to scene variation, scalable to multiple classes.
+	- Limitations: depends on dataset quality and training.
 
-If behavior integration is still pending at submission time, include this section as a planned evaluation protocol with partial pilot results.
+### Metrics to Report (Fill with your measured values)
+1. Precision: ______
+2. Recall: ______
+3. mAP50: ______
+4. mAP50-95: ______
+5. Average latency (ms): ______
+6. FPS: ______
+7. 3D localization error (m): ______
 
-## 7. Discussion
-### 7.1 Strengths
-1. End-to-end integration from detection to action.
-2. Dual-approach perception enables baseline-versus-learned comparison.
-3. Real-time capable architecture.
-4. Modular ROS2 components suitable for extension.
+## 9. Conclusion and Future Work
+### Conclusion
+This mini project demonstrates a practical CV pipeline for construction marker awareness using two approaches: classical HSV-based detection and YOLOv8-based learned detection. Combined with depth-based 3D localization, the system produces actionable spatial outputs in real time and establishes a solid baseline for safety-focused autonomous robotics.
 
-### 7.2 Limitations
-1. Potential sim-to-real performance gap.
-2. Classical HSV branch is sensitive to lighting and color variations.
-3. Sensitivity to depth noise and occlusion.
-4. Class imbalance risks when expanding to barrel detection.
+### Future Work
+1. Retrain YOLO model for stronger cone-and-barrel class balance.
+2. Add temporal tracking for smoother multi-frame detections.
+3. Integrate detection outputs into behavior-level stop/slow/reroute control.
+4. Validate on real-world captured data beyond simulation.
 
-### 7.3 Practical Deployment Considerations
-1. Calibrate camera and depth alignment on real hardware.
-2. Add temporal tracking for stable detections.
-3. Use map-layer fusion for persistent hazard memory.
+## 10. References
+1. ROS2 Documentation. https://docs.ros.org
+2. Nav2 Documentation. https://navigation.ros.org
+3. SLAM Toolbox Package Documentation.
+4. Ultralytics YOLO Documentation. https://docs.ultralytics.com
+5. OpenCV Documentation. https://docs.opencv.org
 
-## 8. Conclusion
-This project establishes a practical and extensible architecture for construction marker awareness in autonomous mobile robots. By combining dual-path visual perception with depth-based 3D localization and a clear navigation-integration roadmap, the framework addresses a critical gap in dynamic construction environments. The proposed KPI methodology, comparative evaluation plan, and phased roadmap provide a credible path from simulation validation to pilot deployment.
+## 11. Name and Roll No of Students and Signature
+| S. No. | Name of Student | Roll No. | Signature |
+|---|---|---|---|
+| 1 | Akash Patel | 1032221882 | ____________________ |
+| 2 | Suryabhaas Karmakar | 1032221820 | ____________________ |
+| 3 | Akash Bopalkar | 10322210569 | ____________________ |
 
-## 9. Future Work
-1. Real-world data collection and field trials.
-2. Completion of behavior-layer coupling with Nav2.
-3. Multi-class expansion to additional site safety objects.
-4. Multi-robot cooperative hazard mapping.
-5. Uncertainty-aware planning using detection confidence.
-
-## 10. Proposed References (Fill with course-required style)
-1. ROS2 documentation and Nav2 documentation.
-2. SLAM Toolbox and AMCL official packages.
-3. Ultralytics YOLOv8 technical resources.
-4. Construction robotics and safety perception literature.
-
-## Appendix A: Suggested Tables
-1. Detector performance by class.
-2. Latency and throughput summary.
-3. Localization error breakdown by distance bin.
-4. Navigation safety outcomes by scenario.
-
-## Appendix B: Suggested Figures
-1. System architecture diagram.
-2. Detection examples with confidence scores.
-3. 3D localization visualization in RViz.
-4. Navigation trajectories with and without hazard-aware behavior.

@@ -15,8 +15,6 @@ Current implementation demonstrates:
 3. Learned detection workflow using YOLO-based inference.
 4. Depth-assisted 3D localization of detections using camera intrinsics.
 
-The next milestone is full cone-and-barrel operational integration with behavior-level responses such as controlled slowdown, stop, and reroute.
-
 ## Business Need and Strategic Value
 Construction zones are dynamic environments where temporary markers are frequently repositioned. Static maps cannot capture these short-cycle changes, creating a safety gap for autonomous operation.
 
@@ -77,27 +75,6 @@ Recommended acceptance targets:
 4. Localization error <= 0.30 m in defined operating range.
 5. Hazard-aware navigation success >= 95% in benchmark scenarios.
 
-## Delivery Roadmap
-### Phase 1: Technical Hardening (Week 1-2)
-1. Finalize package metadata and dependency declaration.
-2. Remove hardcoded paths through ROS parameters.
-3. Standardize launch and run workflows for reproducibility.
-
-### Phase 2: Barrel Expansion (Week 3-4)
-1. Build balanced cone+barrel dataset.
-2. Retrain YOLO with two-class target schema.
-3. Tune thresholds and validate with confusion matrix analysis.
-
-### Phase 3: Behavior Coupling (Week 5-6)
-1. Convert object detections into semantic hazard zones.
-2. Integrate zone policy with Nav2 behavior control.
-3. Validate stop/slow/reroute behavior under dynamic conditions.
-
-### Phase 4: Verification and Reporting (Week 7-8)
-1. Run comparative trials (classical vs learned branch).
-2. Compile KPI dashboards and scenario-level findings.
-3. Package final presentation, report, and demonstration script.
-
 ## Risks and Mitigation Strategy
 1. Simulation-to-real transfer gap.
    Mitigation: domain randomization and real-data fine-tuning.
@@ -116,20 +93,3 @@ Recommended acceptance targets:
 3. Parameterized ROS2 perception nodes with clean launch integration.
 4. Hazard-aware behavior integration design and validation report.
 5. Executive presentation package and academic report package.
-
-## Presentation Structure (Recommended)
-1. Problem context and safety motivation.
-2. System architecture and implementation maturity.
-3. Dual-approach perception design rationale.
-4. KPI methodology and validation strategy.
-5. Risks, roadmap, and deployment pathway.
-6. Business and safety impact.
-
-## Report Structure (Recommended)
-1. Abstract and introduction.
-2. Problem framing and objectives.
-3. Architecture and methodology.
-4. Experimental design and metrics.
-5. Results and comparative analysis.
-6. Limitations, risks, and future work.
-7. Conclusion and deployment outlook.
